@@ -1,7 +1,4 @@
-OutFLANK.Rcheck
-OutFLANK_0.1.tar/gz
-.Rapp.history
-.DS_Store
-.RData
-*Autosaved*
-.Rproj.user
+.conda
+.venv
+.codegpt
+__pycache__
