@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 
 import logging
-#import allel
 
 '''
 import torch
@@ -164,13 +163,12 @@ args = parser.parse_args()
 #set the input and output files
 vcf_file_path = args.vcffile
 
-pop = pd.read_csv(args.population, sep='\s+', usecols = [1], skiprows = 1, header = None)
+
+pop = pd.read_csv(args.population, sep='\\s+', usecols = [1], skiprows = 1, header = None)
 
 merged_output_file_path = args.outputFilePrefix
 
-
 #read and extract the genotype
-
 position_info, genotype_info = vcfReadAndParse.read_vcf_file(vcf_file_path)
 
 #format conversion
@@ -180,8 +178,6 @@ G_matrix = pd.DataFrame(binary_data).fillna(0).astype(int)
 
 
 #calculate FST
-
-
 fst1 = []
 for i in range(len(G_matrix)):
 
@@ -190,6 +186,7 @@ for i in range(len(G_matrix)):
     fst1.append({"CHROM": chrom, "POS": pos, **fst1_line})
     
 fst1_df = pd.DataFrame(fst1)
+
 
 
 #check the He and Fst
@@ -216,7 +213,6 @@ if args.neutral_infer_method == 'Import':
     
     if args.neutral_file:
         null_vcf_file_path = args.neutral_file
-        #null_vcf_file_path = "which_pruned.vcf.gz"
         if null_vcf_file_path is not None:
 
             null_position_info, _ = vcfReadAndParse.read_vcf_file(null_vcf_file_path)
@@ -262,7 +258,6 @@ if args.neutral_infer_method == 'GNN':
     
     
     #using deep learning GNN model to infer the null fst df
-    
     genotype_matrix = G_matrix.to_numpy()
     
     independent_index = gnn.GNN_model(genotype_matrix, position_info, gnn_window_bp = args.gnn_window_bp, loss_threshold = args.loss_threshold)
@@ -275,10 +270,7 @@ if args.neutral_infer_method == 'GNN':
     
     null_fst_df = fst1_df.merge(independent_index, on = ['CHROM', 'POS'], how = 'inner')
     
-    
-    
-    #null_fst_df = fst1_df.iloc[independent_genotype_matrix_keep]
-    
+        
     null_fst_df = null_fst_df[null_fst_df["FSTNoCorr"] < 0.1]
     
     if null_fst_df.shape[0] < 30:
@@ -301,7 +293,6 @@ if null_para is None:
 
 
 #visualize FST distrubtion of neutral sites and p value histogram
-
 visualization.OutFLANKResultsPlotter(null_para, withOutliers=True, NoCorr=True, Hmin=0.1, binwidth=0.001, Zoom=False, RightZoomFraction=0.05, titletext = args.outputFilePrefix)
 plt.close()
 
@@ -318,6 +309,21 @@ fst_final = parameter_estimate_on_neutral_FST_distribution.p_outlier_finder_chis
 
 fst_final_filtered_outlier = fst_final[fst_final['OutlierFlag'] == True]
 fst_final_filtered_He = fst_final[fst_final['He'] > 0.1]
+
+#FST treatment
+#convert to numeric
+fst_final_filtered_He['FST'] = pd.to_numeric(fst_final_filtered_He['FST'], errors='coerce')
+
+#replace +/- inf with NaN
+fst_final_filtered_He['FST'].replace([np.inf, -np.inf], np.nan, inplace=True)
+
+#set negative FST to zero
+fst_final_filtered_He.loc[fst_final_filtered_He['FST'] < 0, 'FST'] = 0
+
+#drop rows with NaN / None values in 'FST' column
+fst_final_filtered_He = fst_final_filtered_He.dropna(subset=['FST'])
+
+
 
 fst_final_filtered_He_outlier = fst_final_filtered_He[fst_final_filtered_He['OutlierFlag'] == True]
 
