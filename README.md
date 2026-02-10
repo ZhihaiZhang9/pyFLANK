@@ -6,10 +6,10 @@ FST calculation is based on Weir and Cockerham (1984).
 
 Key Features
 
-Graph-based representation of local dependency context of loci and their dependence structure
-GNN-based null distribution inference
-Compatible with standard FST-based workflows
-Designed to complement, not replace, LD pruning and clumping
+1. Graph-based representation of local dependency context of loci and their dependence structure,
+2. GNN-based null distribution inference,
+3. Compatible with standard FST-based workflows,
+4. Designed to complement, not replace, LD pruning and clumping.
 
 Date Format
 
