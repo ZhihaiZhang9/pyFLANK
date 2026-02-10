@@ -26,10 +26,16 @@ Phased or unphased genotype are both supported.
 A population file is also required as following format:
 
 id       pop 
+
 sample1  pop1  
+
 sample2  pop1 
+
 sample3  pop2 
+
 sample4  pop3 
+
+
 
 
 
