@@ -1,6 +1,6 @@
 Overview
 
-pyFLANK is an open-source and automated Python implementation which detects FST outliers using a null distribution inferred from quasi-independent loci. Our tool integrates three approaches to identify loci obeying a null distribution: graph neural network (GNN) inference, linkage disequilibrium (LD)-based inference, and user-defined input. Because pyFLANK uses GNN-based inference of quasi-independent loci, it yields a more accurate null model with less need for user parameter input. 
+pyFLANK is an open-source and automated Python implementation which detects FST outliers using a null distribution inferred from quasi-independent loci inspired by the R package OutFLANK(https://doi.org/10.1086/682949). Our tool integrates three approaches to identify loci obeying a null distribution: graph neural network (GNN) inference, linkage disequilibrium (LD)-based inference, and user-defined input. Because pyFLANK uses GNN-based inference of quasi-independent loci, it yields a more accurate null model with less need for user parameter input. 
 
 FST calculation is based on Weir and Cockerham (1984).
 
