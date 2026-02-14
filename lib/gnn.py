@@ -113,20 +113,51 @@ def GNN_model(genotype_matrix, position_info, gnn_window_bp = 200000, loss_thres
                 
                 correlation_matrix = np.corrcoef(genotype_win) ** 2
 
-                edge_indices = np.argwhere(np.triu(correlation_matrix, k = 1) > cor_threashold)
 
-                edges = edge_indices.tolist()
+                edge_indices = np.argwhere(np.triu(correlation_matrix, k = 1) > cor_threashold)
+                
+                #simple edges
+                #edges = edge_indices.tolist()
+                
+                #add weights to edges based on correlation values
+                edges = []
+                edge_weights = []
+                for idx in edge_indices:
+                    i1, i2 = idx
+                    weight = correlation_matrix[i1, i2]
+                    edges.append((i1, i2))
+                    edge_weights.append(weight)
+
+
+
                 
                 #convert edges to PyTorch tensor format
                 if len(edges) == 0:
-                    #i += max_var_count
-                    #continue
-                    num_nodes = genotype_win.shape[0]
-                    edge_index = torch.arange(0, num_nodes, dtype = torch.long).repeat(2,1)
+                    ##i += max_var_count
+                    ##continue
+                    #num_nodes = genotype_win.shape[0]
+                    #edge_index = torch.arange(0, num_nodes, dtype = torch.long).repeat(2,1)
+
+                    '''
+                    #No LD edges, in this window, skip Laplacian smoothing
+                    #directly compute embeddings without training, and move to next window
+                    with torch.no_grad():
+                        out = model(data.x, data.edge_index)
+                        embeddings = out.detach().numpy().flatten()
+                        embeddings_list.append(embeddings)
+                    '''
+                    #no LD edges, embedding is just the node features, which is the mean genotype value for each variant in the window
+                    embeddings = genotype_win.mean(axis = 1)
+                    embeddings_list.append(embeddings)
+                    
+
+                    i += max_var_count
+                    continue
                 
                 else:
                 
                     edge_index = torch.tensor(edges, dtype = torch.long).t().contiguous()
+                    edge_weights = torch.tensor(edge_weights, dtype = torch.float)
 
 
                 #create node features ()
@@ -144,15 +175,64 @@ def GNN_model(genotype_matrix, position_info, gnn_window_bp = 200000, loss_thres
                 #train loop
                     
                 epoch = 0
-                while True:
+                #while True:
+                max_epochs = 1000
+                while epoch < max_epochs:
                     model.train()
                     optimizer.zero_grad()
                     out = model(data.x, data.edge_index)
                     
                     
                     #Laplacian-style smoothness regularization
-                    edge_weights = torch.pow(out[data.edge_index[0]] - out[data.edge_index[1]], 2).sum()
-                    loss = edge_weights
+                    
+                    
+                    #edge_weights = torch.pow(out[data.edge_index[0]] - out[data.edge_index[1]], 2).sum()
+                    #loss = edge_weights
+                    
+                    #degree-normalized LD-weighted Laplacian loss
+
+                    #move to correct device
+                    w = edge_weights.to(out.device)
+
+                    z = out.squeeze() #flatten the output to 1D
+
+                    #i_idx = edge_index[0]
+                    #j_idx = edge_index[1]
+
+                    row, col = edge_index
+
+                    w = edge_weights.to(z.device) #ensure edge weights are on the same device as the model output
+
+                    #compute weighted degrees
+                    #num_nodes = out.size(0)
+                    #deg = torch.zeros(num_nodes, device = out.device)
+
+                    num_nodes = z.size(0)
+                    deg = torch.zeros(num_nodes, device = z.device)
+
+                    #accumulate weighted degree
+                    #deg.index_add_(0, i_idx, w)
+                    #deg.index_add_(0, j_idx, w)
+
+                    deg.index_add_(0, row, w)
+                    deg.index_add_(0, col, w)
+
+                    #normalized embeddings
+                    #zi = out[i_idx] / torch.sqrt(deg[i_idx].unsqueeze(1) + 1e-8)
+                    #zj = out[j_idx] / torch.sqrt(deg[j_idx].unsqueeze(1) + 1e-8)
+
+                    zi = z[row] / torch.sqrt(deg[row] + 1e-8)
+                    zj = z[col] / torch.sqrt(deg[col] + 1e-8)
+
+                    diff = zi - zj
+
+                    #normalized , LD-weighted smoothness
+
+                    loss = torch.sum(w * diff**2)
+
+
+
+
                     loss.backward() #conputes the gradients of the loss with respect to each model parameter.
                     optimizer.step()
                     
@@ -194,3 +274,19 @@ def GNN_model(genotype_matrix, position_info, gnn_window_bp = 200000, loss_thres
     independent_all_df = pd.concat(independent_all_indices, ignore_index=True)
     
     return independent_all_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
